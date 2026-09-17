@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MHASpace</title>
+  <title>MHASpace Metaverse PoC</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #080b10; font-family: system-ui, sans-serif; color: #fff; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #050811; font-family: system-ui, sans-serif; color: #fff; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
     
     .hud {
@@ -23,25 +26,29 @@
 
     .cap-banner {
       position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-      background: rgba(234, 179, 8, 0.2); border: 1px solid #eab308; color: #fef08a;
-      padding: 6px 14px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10; width: 90%; max-width: 380px;
+      background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a;
+      padding: 6px 14px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10; width: 90%; max-width: 420px;
     }
 
     .action-bar {
-      position: absolute; bottom: 30px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 14px; z-index: 10;
+      position: absolute; bottom: 25px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 10;
     }
-    .pay-group { display: flex; gap: 10px; }
+    .pay-group { display: flex; gap: 8px; }
     .btn-pay {
       background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: white;
-      padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: bold;
+      padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: bold;
       box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); cursor: pointer; touch-action: manipulation;
     }
+    .btn-pay.gold {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+    }
 
-    .dpad { display: grid; grid-template-columns: repeat(3, 50px); grid-gap: 8px; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-gap: 6px; }
     .dbtn {
-      width: 50px; height: 50px; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; color: white; font-size: 20px;
+      width: 48px; height: 48px; background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; color: white; font-size: 18px;
       display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;
     }
     .dbtn:active { background: rgba(56, 189, 248, 0.5); }
@@ -51,23 +58,23 @@
 
   <div class="hud">
     <div>
-      <span class="badge" id="rank-badge">برونزي (1x)</span>
-      <div style="font-size: 11px; margin-top: 4px; color: #4ade80;">متصل بالسيرفر ✅</div>
+      <span class="badge" id="rank-badge">سفينة عادية (1x)</span>
+      <div style="font-size: 11px; margin-top: 4px; color: #4ade80;" id="db-status">مربوط مع Firebase ⚡</div>
     </div>
     <div class="stats">
       <div style="font-size: 10px; color: #94a3b8; text-align: right;">رصيد MHA النقاط</div>
-      <div class="val"><span id="score-val">0</span> / 750,000,000</div>
+      <div class="val"><span id="score-val">0.00</span> / 750,000,000</div>
     </div>
   </div>
 
   <div class="cap-banner">
-    ⚠️ الحد الأقصى للتجميع المباشر: 750,000,000 MHA قبل الترحيل لـ EVM
+    🚀 جمع السنتات بالمكعبات الصغيرة و1.0 MHA للمكعب الكبير | الإمداد: 750,000,000
   </div>
 
   <div class="action-bar">
     <div class="pay-group">
       <button class="btn-pay" onclick="boost(10, '0.10')">تفعيل 10x (0.10 TON)</button>
-      <button class="btn-pay" onclick="boost(20, '0.20')">تفعيل 20x (0.20 TON)</button>
+      <button class="btn-pay gold" onclick="boost(100, '1.00')">تفعيل 100x (1.00 TON)</button>
     </div>
     
     <div class="dpad">
@@ -80,15 +87,33 @@
   <div id="canvas-container"></div>
 
   <script>
-    let score = 0;
+    // --- Firebase Init ---
+    const firebaseConfig = {
+      databaseURL: "https://mhaspace-97691-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const userId = "user_demo_" + Math.floor(Math.random() * 1000);
+
+    let score = 0.00;
     let multiplier = 1;
     const maxCap = 750000000;
     const DEST_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
 
-    // Three.js Render Setup
+    // --- Sync with DB ---
+    function saveToFirebase() {
+      db.ref('users/' + userId).set({
+        score: score,
+        multiplier: multiplier,
+        lastUpdated: Date.now()
+      });
+    }
+
+    // --- Three.js Setup ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x080b10);
+    scene.background = new THREE.Color(0x050811);
+    scene.fog = new THREE.FogExp2(0x050811, 0.03);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -97,81 +122,81 @@
     container.appendChild(renderer.domElement);
 
     // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0x38bdf8, 2, 50);
-    pointLight.position.set(0, 10, 10);
-    scene.add(pointLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.DirectionalLight(0x38bdf8, 1.5);
+    light.position.set(0, 10, 10);
+    scene.add(light);
 
-    // Grid Floor
-    const grid = new THREE.GridHelper(60, 40, 0x38bdf8, 0x1e293b);
-    grid.position.y = -0.5;
+    // Grid / Space Stars
+    const grid = new THREE.GridHelper(100, 50, 0x0284c7, 0x1e293b);
+    grid.position.y = -1;
     scene.add(grid);
 
-    // Player Mesh
-    const pGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 16);
-    const pMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
-    const player = new THREE.Mesh(pGeo, pMat);
-    player.position.y = 0.1;
-    scene.add(player);
+    // --- Spaceship Mesh ---
+    const shipGroup = new THREE.Group();
+    const bodyGeo = new THREE.ConeGeometry(0.6, 2, 4);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8, roughness: 0.2 });
+    const shipBody = new THREE.Mesh(bodyGeo, bodyMat);
+    shipBody.rotation.x = Math.PI / 2;
+    shipGroup.add(shipBody);
 
-    // Crystal Mesh
-    const cGeo = new THREE.OctahedronGeometry(0.7);
-    const cMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, roughness: 0.1 });
-    const crystal = new THREE.Mesh(cGeo, cMat);
-    crystal.position.set(0, 0.5, -6);
-    scene.add(crystal);
+    const wingGeo = new THREE.BoxGeometry(2, 0.1, 0.8);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+    const wings = new THREE.Mesh(wingGeo, wingMat);
+    wings.position.z = 0.3;
+    shipGroup.add(wings);
 
-    camera.position.set(0, 5, 8);
-    camera.lookAt(player.position);
+    shipGroup.position.set(0, 0, 4);
+    scene.add(shipGroup);
 
-    // Controls Logic
-    function movePlayer(dx, dz) {
-      player.position.x += dx;
-      player.position.z += dz;
-      camera.position.x = player.position.x;
-      camera.position.z = player.position.z + 8;
-
-      // Collision Detection
-      let dist = player.position.distanceTo(crystal.position);
-      if(dist < 1.0) {
-        collect();
-      }
+    // --- Cubes Logic ---
+    const cubes = [];
+    function spawnCube(isBoss = false) {
+      const size = isBoss ? 1.2 : 0.4;
+      const color = isBoss ? 0xeab308 : 0x38bdf8;
+      const geo = new THREE.BoxGeometry(size, size, size);
+      const mat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      
+      mesh.position.set((Math.random() - 0.5) * 16, 0, -30);
+      mesh.userData = { isBoss: isBoss, speed: 0.15 + Math.random() * 0.1 };
+      scene.add(mesh);
+      cubes.push(mesh);
     }
 
-    function collect() {
-      if(score >= maxCap) return;
-      score += (1 * multiplier);
-      document.getElementById('score-val').innerText = score.toLocaleString();
-      
-      if(score >= 1000000) {
-        document.getElementById('rank-badge').innerText = `فضي (${multiplier}x)`;
-      }
+    // Spawn regular cross cubes frequently & Boss cubes rarely
+    setInterval(() => spawnCube(false), 800);
+    setInterval(() => spawnCube(true), 5000);
 
-      // Respawn Crystal
-      crystal.position.x = (Math.random() - 0.5) * 14;
-      crystal.position.z = (Math.random() - 0.5) * 14;
+    camera.position.set(0, 6, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Controls
+    function moveShip(dx, dz) {
+      shipGroup.position.x = Math.max(-8, Math.min(8, shipGroup.position.x + dx));
+      shipGroup.position.z = Math.max(-2, Math.min(6, shipGroup.position.z + dz));
     }
 
     function boost(multi, tonAmt) {
-      const tonUrl = `https://app.tonkeeper.com/transfer/${DEST_WALLET}?amount=${parseFloat(tonAmt)*1000000000}&text=MHASpaceBoost`;
+      const tonUrl = `https://app.tonkeeper.com/transfer/${DEST_WALLET}?amount=${parseFloat(tonAmt)*1000000000}&text=MHASpaceBoost${multi}x`;
       window.open(tonUrl, '_blank');
       multiplier = multi;
-      document.getElementById('rank-badge').innerText = `ممتاز (${multi}x)`;
+      document.getElementById('rank-badge').innerText = `المضاعف الناري (${multi}x)`;
+      saveToFirebase();
     }
 
     // Touch & Click Event Handlers
     const bindBtn = (id, dx, dz) => {
       const el = document.getElementById(id);
-      const handler = (e) => { e.preventDefault(); movePlayer(dx, dz); };
+      const handler = (e) => { e.preventDefault(); moveShip(dx, dz); };
       el.addEventListener('touchstart', handler, {passive: false});
       el.addEventListener('click', handler);
     };
 
-    bindBtn('btn-up', 0, -0.6);
-    bindBtn('btn-down', 0, 0.6);
-    bindBtn('btn-left', -0.6, 0);
-    bindBtn('btn-right', 0.6, 0);
+    bindBtn('btn-up', 0, -0.5);
+    bindBtn('btn-down', 0, 0.5);
+    bindBtn('btn-left', -0.5, 0);
+    bindBtn('btn-right', 0.5, 0);
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -179,11 +204,44 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // Animation Loop
     function animate() {
       requestAnimationFrame(animate);
-      crystal.rotation.y += 0.03;
+
+      // Grid Movement (Speed Effect)
+      grid.position.z += 0.1;
+      if (grid.position.z > 2) grid.position.z = 0;
+
+      // Cubes Movement & Collision
+      for (let i = cubes.length - 1; i >= 0; i--) {
+        const c = cubes[i];
+        c.position.z += c.userData.speed;
+        c.rotation.x += 0.02;
+        c.rotation.y += 0.02;
+
+        // Collision Check
+        if (shipGroup.position.distanceTo(c.position) < 1.2) {
+          const reward = c.userData.isBoss ? (1.0 * multiplier) : (0.01 * multiplier);
+          score = Math.min(maxCap, score + reward);
+          document.getElementById('score-val').innerText = score.toFixed(2);
+          
+          saveToFirebase();
+
+          scene.remove(c);
+          cubes.splice(i, 1);
+          continue;
+        }
+
+        // Out of Bounds Cleanup
+        if (c.position.z > 8) {
+          scene.remove(c);
+          cubes.splice(i, 1);
+        }
+      }
+
       renderer.render(scene, camera);
     }
+
     animate();
   </script>
 </body>
