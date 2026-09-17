@@ -2,228 +2,209 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MHA Metaverse - Crystal Collector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>MHASpace Mini App</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; background: #0f172a; font-family: system-ui, sans-serif; touch-action: none; }
-    #dpad {
-      position: absolute; bottom: 30px; left: 30px;
-      display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);
-      gap: 5px; z-index: 10;
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #080b10; color: #fff; font-family: system-ui, sans-serif; overflow: hidden; }
+    #canvas-container { width: 100vw; height: 100vh; display: block; }
+    
+    /* UI Overlay */
+    .hud {
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px;
+      padding: 10px 16px; z-index: 10;
     }
-    .btn {
-      background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
-      color: white; border-radius: 12px; font-weight: bold; font-size: 18px;
-      display: flex; align-items: center; justify-content: center; user-select: none;
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; }
+    .stats { text-align: left; }
+    .stats .val { font-size: 18px; font-weight: bold; color: #38bdf8; }
+    
+    /* Notice Banner */
+    .cap-banner {
+      position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+      background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a;
+      padding: 6px 14px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10;
     }
-    .btn:active { background: #2563eb; }
-    #btn-up { grid-column: 2; grid-row: 1; }
-    #btn-left { grid-column: 1; grid-row: 2; }
-    #btn-down { grid-column: 2; grid-row: 3; }
-    #btn-right { grid-column: 3; grid-row: 2; }
 
-    #ui {
-      position: absolute; top: 20px; right: 20px; left: 20px;
-      display: flex; justify-content: space-between; color: white;
-      background: rgba(0,0,0,0.6); padding: 10px 18px; border-radius: 12px; z-index: 10;
-      backdrop-filter: blur(8px);
+    /* Controls & Payment Modal */
+    .action-bar {
+      position: absolute; bottom: 20px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 10;
+    }
+    .pay-group { display: flex; gap: 8px; }
+    .btn-pay {
+      background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: white;
+      padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: bold;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); cursor: pointer;
+    }
+    .btn-pay:active { transform: scale(0.95); }
+    
+    /* Controller Pad */
+    .dpad { display: grid; grid-template-columns: repeat(3, 45px); grid-gap: 5px; }
+    .dbtn {
+      width: 45px; height: 45px; background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: white; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
     }
   </style>
 </head>
 <body>
 
-  <div id="ui">
-    <div>النقاط: <span id="points">0</span> MHA</div>
-    <div id="status">اقترب من البلورة 📍</div>
+  <div class="hud">
+    <div>
+      <span class="badge" id="rank-badge">برونزي (1x)</span>
+      <div style="font-size: 11px; margin-top: 4px; color: #94a3b8;" id="status-text">متصل بالسيرفر ✅</div>
+    </div>
+    <div class="stats">
+      <div style="font-size: 10px; color: #94a3b8;">رصيد MHA النقاط</div>
+      <div class="val" id="mha-score">0 / 750</div>
+    </div>
   </div>
 
-  <div id="dpad">
-    <div class="btn" id="btn-up">▲</div>
-    <div class="btn" id="btn-left">◄</div>
-    <div class="btn" id="btn-down">▼</div>
-    <div class="btn" id="btn-right">►</div>
+  <div class="cap-banner">
+    ⚠️ الحد الأقصى للتجميع المباشر: 750 MHA قبل الترحيل لـ EVM
   </div>
+
+  <div class="action-bar">
+    <div id="ton-connect-btn"></div>
+    <div class="pay-group">
+      <button class="btn-pay" onclick="boostSpeed(0.10, 10)">تفعيل 10x (0.10 TON)</button>
+      <button class="btn-pay" onclick="boostSpeed(0.20, 20)">تفعيل 20x (0.20 TON)</button>
+    </div>
+    
+    <div class="dpad">
+      <div></div><div class="dbtn" onclick="move(0,-0.5)">▲</div><div></div>
+      <div class="dbtn" onclick="move(-0.5,0)">◄</div><div></div><div class="dbtn" onclick="move(0.5,0)">►</div>
+      <div></div><div class="dbtn" onclick="move(0,0.5)">▼</div><div></div>
+    </div>
+  </div>
+
+  <div id="canvas-container"></div>
 
   <script>
-    // 1. المشهد والضوء
+    const DESTINATION_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
+    let score = 0;
+    let multiplier = 1;
+    const maxCap = 750;
+
+    // Initialize TON Connect
+    const tonConnectUI = new TONConnectUI.TonConnectUI({
+        manifestUrl: 'https://mohamed-habish-official.pages.dev/tonconnect-manifest.json',
+        buttonRootId: 'ton-connect-btn'
+    });
+
+    // Three.js Setup
+    const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.fog = new THREE.FogExp2(0x080b10, 0.05);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(5, 10, 7);
-    scene.add(dirLight);
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.PointLight(0x38bdf8, 2, 50);
+    light.position.set(0, 10, 10);
+    scene.add(light);
 
-    // 2. الأرضية
-    const floorGeo = new THREE.PlaneGeometry(20, 20);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
+    // Ground Grid
+    const grid = new THREE.GridHelper(50, 50, 0x38bdf8, 0x1e293b);
+    grid.position.y = -0.5;
+    scene.add(grid);
 
-    // 3. الشخصية
-    const playerGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1, 16), bodyMat);
-    body.position.y = 0.5;
-    playerGroup.add(body);
-    scene.add(playerGroup);
+    // Player (Avatar)
+    const pGeo = new THREE.CylinderGeometry(0.4, 0.4, 1, 16);
+    const pMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+    const player = new THREE.Mesh(pGeo, pMat);
+    scene.add(player);
 
-    // 4. البلورة الإشعاعية
-    const crystalGeo = new THREE.OctahedronGeometry(0.6, 0);
-    const crystalMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, roughness: 0.2 });
-    const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-    crystal.position.set(0, 1, -5);
+    // Crystal Core
+    const cGeo = new THREE.OctahedronGeometry(0.6);
+    const cMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, wireframe: false, emissive: 0x0284c7 });
+    const crystal = new THREE.Mesh(cGeo, cMat);
+    crystal.position.set(0, 0.5, -5);
     scene.add(crystal);
 
-    const crystalLight = new THREE.PointLight(0x38bdf8, 2, 4);
-    crystalLight.position.set(0, 1, -5);
-    scene.add(crystalLight);
+    camera.position.set(0, 4, 6);
+    camera.lookAt(player.position);
 
-    // 5. نظام حركة الشخصية
-    const cameraOffset = new THREE.Vector3(0, 5, 7);
-    const keys = { up: false, down: false, left: false, right: false };
-    let points = 0;
-    let isCollected = false;
-    let isAnimatingCollection = false;
+    function move(dx, dz) {
+      player.position.x += dx;
+      player.position.z += dz;
+      camera.position.x = player.position.x;
+      camera.position.z = player.position.z + 6;
 
-    const bindBtn = (id, key) => {
-      const el = document.getElementById(id);
-      el.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[key] = true; });
-      el.addEventListener('pointerup', (e) => { e.preventDefault(); keys[key] = false; });
-      el.addEventListener('pointerleave', () => { keys[key] = false; });
-    };
-    bindBtn('btn-up', 'up'); bindBtn('btn-down', 'down');
-    bindBtn('btn-left', 'left'); bindBtn('btn-right', 'right');
-
-    // 6. تأثير الجزيئات اللامعة عند الالتقاط
-    function createBurstParticles(position) {
-      const particleCount = 30;
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(particleCount * 3);
-      const velocities = [];
-
-      for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = position.x;
-        positions[i * 3 + 1] = position.y;
-        positions[i * 3 + 2] = position.z;
-        velocities.push(
-          (Math.random() - 0.5) * 0.2,
-          (Math.random() - 0.5) * 0.2 + 0.1,
-          (Math.random() - 0.5) * 0.2
-        );
+      // Collision Check
+      let dist = player.position.distanceTo(crystal.position);
+      if(dist < 0.8) {
+        collectCrystal();
       }
-
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const material = new THREE.PointsMaterial({
-        color: 0x38bdf8, size: 0.15, transparent: true, opacity: 1, blending: THREE.AdditiveBlending
-      });
-
-      const particleSystem = new THREE.Points(geometry, material);
-      scene.add(particleSystem);
-
-      function animateParticles() {
-        const posAttr = particleSystem.geometry.attributes.position;
-        for (let i = 0; i < particleCount; i++) {
-          posAttr.array[i * 3] += velocities[i].x;
-          posAttr.array[i * 3 + 1] += velocities[i].y;
-          posAttr.array[i * 3 + 2] += velocities[i].z;
-        }
-        posAttr.needsUpdate = true;
-        material.opacity -= 0.03;
-
-        if (material.opacity > 0) {
-          requestAnimationFrame(animateParticles);
-        } else {
-          scene.remove(particleSystem);
-          geometry.dispose();
-          material.dispose();
-        }
-      }
-      animateParticles();
     }
 
-    // 7. دالة تحديث النقاط عبر API Firebase
-    async function claimCrystalReward(adId, authorId) {
-      document.getElementById('status').innerText = "جاري الحفظ...";
+    function collectCrystal() {
+      if(score >= maxCap) {
+        alert("وصلت للحد الأقصى للتجميع المباشر (750 MHA). انتظر ترحيل EVM!");
+        return;
+      }
+      score = Math.min(maxCap, score + (1 * multiplier));
+      document.getElementById('mha-score').innerText = `${score} / ${maxCap}`;
+      
+      // Update Rank Badge
+      if(score >= 1000000) {
+        document.getElementById('rank-badge').innerText = "فضي (Silver)";
+      }
+
+      // Respawn Crystal
+      crystal.position.x = (Math.random() - 0.5) * 10;
+      crystal.position.z = (Math.random() - 0.5) * 10;
+      syncWithServer(score);
+    }
+
+    async function boostSpeed(amount, multi) {
+      if(!tonConnectUI.connected) {
+        alert("يرجى ربط محفظة TON أولاً عبر الزر العلوي!");
+        return;
+      }
+      
+      const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+        messages: [{
+          address: DESTINATION_WALLET,
+          amount: (amount * 1000000000).toString() // NanoTON
+        }]
+      };
+
       try {
-        const response = await fetch('/api/boost', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: adId, authorId: authorId })
-        });
-        const data = await response.json();
-
-        if (response.ok && data.ok) {
-          points = data.points;
-          document.getElementById('points').innerText = points;
-          document.getElementById('status').innerText = "تم الجمع بنجاح! 🎉";
-        } else {
-          document.getElementById('status').innerText = "خطأ في التجميع";
-        }
-      } catch (err) {
-        document.getElementById('status').innerText = "تعذر الاتصال بالسيرفر";
+        await tonConnectUI.sendTransaction(transaction);
+        multiplier = multi;
+        document.getElementById('rank-badge').innerText = `ممتاز (${multi}x)`;
+        alert(`تم تفعيل المضاعف ${multi}x بنجاح!`);
+      } catch (e) {
+        alert("تم إلغاء أو فشل المعاملة.");
       }
     }
 
-    // 8. حلقة التحديث الرئيسية
+    function syncWithServer(currentScore) {
+      // Cloudflare Worker API call
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: currentScore, multiplier: multiplier })
+      }).catch(() => {});
+    }
+
     function animate() {
       requestAnimationFrame(animate);
-
-      if (!isCollected && !isAnimatingCollection) {
-        crystal.rotation.y += 0.02;
-        crystal.rotation.x += 0.01;
-
-        // اكتشاف التصادم
-        if (playerGroup.position.distanceTo(crystal.position) < 1.2) {
-          isAnimatingCollection = true;
-          createBurstParticles(crystal.position);
-
-          let scale = 1;
-          function popAnimation() {
-            scale += 0.08;
-            crystal.scale.set(scale, scale, scale);
-            crystalLight.intensity += 0.5;
-
-            if (scale < 1.8) {
-              requestAnimationFrame(popAnimation);
-            } else {
-              isCollected = true;
-              scene.remove(crystal);
-              scene.remove(crystalLight);
-              claimCrystalReward("-YourAdFirebaseID", "user_author_id");
-            }
-          }
-          popAnimation();
-        }
-      }
-
-      // تحريك الشخصية والكاميرا
-      const speed = 0.1;
-      if (keys.up && playerGroup.position.z > -9) playerGroup.position.z -= speed;
-      if (keys.down && playerGroup.position.z < 9) playerGroup.position.z += speed;
-      if (keys.left && playerGroup.position.x > -9) playerGroup.position.x -= speed;
-      if (keys.right && playerGroup.position.x < 9) playerGroup.position.x += speed;
-
-      camera.position.x = playerGroup.position.x + cameraOffset.x;
-      camera.position.y = playerGroup.position.y + cameraOffset.y;
-      camera.position.z = playerGroup.position.z + cameraOffset.z;
-      camera.lookAt(playerGroup.position);
-
+      crystal.rotation.y += 0.02;
       renderer.render(scene, camera);
     }
     animate();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
   </script>
 </body>
 </html>
