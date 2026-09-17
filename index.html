@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MHASpace Metaverse PoC</title>
+  <title>MHASpace Metaverse PoC - TON Connected</title>
+  
+  <!-- Three.js & Firebase -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <!-- TON Connect SDK -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #050811; font-family: system-ui, sans-serif; color: #fff; }
@@ -18,21 +23,23 @@
       display: flex; justify-content: space-between; align-items: center;
       background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
       border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px;
-      padding: 12px 16px; z-index: 10;
+      padding: 10px 14px; z-index: 10;
     }
-    .badge { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold; }
+    .badge { font-size: 11px; padding: 4px 8px; border-radius: 20px; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold; }
     .stats { text-align: left; dir: ltr; }
-    .stats .val { font-size: 18px; font-weight: bold; color: #38bdf8; }
+    .stats .val { font-size: 16px; font-weight: bold; color: #38bdf8; }
+
+    #ton-connect-btn { z-index: 10; transform: scale(0.85); }
 
     .cap-banner {
-      position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+      position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
       background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a;
-      padding: 6px 14px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10; width: 90%; max-width: 420px;
+      padding: 5px 12px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10; width: 92%; max-width: 420px;
     }
 
     .action-bar {
-      position: absolute; bottom: 25px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 10;
+      position: absolute; bottom: 20px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10;
     }
     .pay-group { display: flex; gap: 8px; }
     .btn-pay {
@@ -45,9 +52,9 @@
       box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
     }
 
-    .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-gap: 6px; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 46px); grid-gap: 6px; }
     .dbtn {
-      width: 48px; height: 48px; background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+      width: 46px; height: 46px; background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; color: white; font-size: 18px;
       display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;
     }
@@ -59,22 +66,26 @@
   <div class="hud">
     <div>
       <span class="badge" id="rank-badge">سفينة عادية (1x)</span>
-      <div style="font-size: 11px; margin-top: 4px; color: #4ade80;" id="db-status">مربوط مع Firebase ⚡</div>
+      <div style="font-size: 10px; margin-top: 4px; color: #4ade80;" id="db-status">مربوط مع Firebase ⚡</div>
     </div>
+    
+    <!-- زر TON Connect UI -->
+    <div id="ton-connect-btn"></div>
+
     <div class="stats">
-      <div style="font-size: 10px; color: #94a3b8; text-align: right;">رصيد MHA النقاط</div>
-      <div class="val"><span id="score-val">0.00</span> / 750,000,000</div>
+      <div style="font-size: 10px; color: #94a3b8; text-align: right;">رصيد MHA</div>
+      <div class="val"><span id="score-val">0.00</span> / 750M</div>
     </div>
   </div>
 
   <div class="cap-banner">
-    🚀 جمع السنتات بالمكعبات الصغيرة و1.0 MHA للمكعب الكبير | الإمداد: 750,000,000
+    🚀 المربعات الصغيرة: 0.01 MHA | الكبيرة: 1.0 MHA | السقف: 750,000,000
   </div>
 
   <div class="action-bar">
     <div class="pay-group">
-      <button class="btn-pay" onclick="boost(10, '0.10')">تفعيل 10x (0.10 TON)</button>
-      <button class="btn-pay gold" onclick="boost(100, '1.00')">تفعيل 100x (1.00 TON)</button>
+      <button class="btn-pay" onclick="buyMultiplier(10, '0.10')">مضاعف 10x (0.10 TON)</button>
+      <button class="btn-pay gold" onclick="buyMultiplier(100, '1.00')">مضاعف 100x (1.00 TON)</button>
     </div>
     
     <div class="dpad">
@@ -87,29 +98,95 @@
   <div id="canvas-container"></div>
 
   <script>
-    // --- Firebase Init ---
+    // --- 1. Firebase Configuration ---
     const firebaseConfig = {
       databaseURL: "https://mhaspace-97691-default-rtdb.europe-west1.firebasedatabase.app/"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const userId = "user_demo_" + Math.floor(Math.random() * 1000);
 
+    // Key Variables
+    let userWalletAddress = null; // سيتم تحديثه عند اتصال المحفظة
     let score = 0.00;
     let multiplier = 1;
     const maxCap = 750000000;
-    const DEST_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
+    const RECEIVER_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
 
-    // --- Sync with DB ---
+    // --- 2. TON Connect Integration ---
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://mohamed-habish-official.pages.dev/tonconnect-manifest.json',
+        buttonRootId: 'ton-connect-btn'
+    });
+
+    // الاستماع لحالة اتصال المحفظة
+    tonConnectUI.onStatusChange(wallet => {
+      if (wallet) {
+        userWalletAddress = wallet.account.address;
+        document.getElementById('db-status').innerText = "المحفظة متصلة 🔗";
+        loadUserDataFromFirebase(userWalletAddress);
+      } else {
+        userWalletAddress = null;
+        document.getElementById('db-status').innerText = "غير متصل بالمحفظة ⚠️";
+      }
+    });
+
+    // --- 3. Firebase Read/Write Logic ---
     function saveToFirebase() {
-      db.ref('users/' + userId).set({
+      // نستخدم عنوان المحفظة كـ Key رئيسي إذا وُجد، وإلا نستخدم حساباً مؤقتاً
+      const storageKey = userWalletAddress || "guest_player";
+      
+      db.ref('players/' + storageKey).set({
+        wallet: userWalletAddress || "Not Connected",
         score: score,
         multiplier: multiplier,
-        lastUpdated: Date.now()
+        lastActive: Date.now()
       });
     }
 
-    // --- Three.js Setup ---
+    function loadUserDataFromFirebase(address) {
+      db.ref('players/' + address).once('value').then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          score = data.score || 0.00;
+          multiplier = data.multiplier || 1;
+          document.getElementById('score-val').innerText = score.toFixed(2);
+          document.getElementById('rank-badge').innerText = `المضاعف (${multiplier}x)`;
+        }
+      });
+    }
+
+    // --- 4. TON Payment Transaction ---
+    async function buyMultiplier(multi, tonAmount) {
+      if (!userWalletAddress) {
+        alert("يرجى ربط محفظة TON أولاً لتأكيد المعاملة!");
+        return;
+      }
+
+      const nanoTon = Math.floor(parseFloat(tonAmount) * 1000000000); // تحويل TON إلى NanoTON
+
+      const transaction = {
+        validUntil: Math.floor(Date.now() / 1000) + 60, // صلاحية المعاملة 60 ثانية
+        messages: [
+          {
+            address: RECEIVER_WALLET,
+            amount: nanoTon.toString()
+          }
+        ]
+      };
+
+      try {
+        await tonConnectUI.sendTransaction(transaction);
+        // عند نجاح الدفع على الشبكة:
+        multiplier = multi;
+        document.getElementById('rank-badge').innerText = `المضاعف الناري (${multi}x)`;
+        saveToFirebase();
+        alert(`تم تفعيل مضاعف ${multi}x بنجاح!`);
+      } catch (e) {
+        console.error("Payment failed or cancelled:", e);
+      }
+    }
+
+    // --- 5. Three.js Game Engine ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050811);
@@ -121,18 +198,16 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const light = new THREE.DirectionalLight(0x38bdf8, 1.5);
     light.position.set(0, 10, 10);
     scene.add(light);
 
-    // Grid / Space Stars
     const grid = new THREE.GridHelper(100, 50, 0x0284c7, 0x1e293b);
     grid.position.y = -1;
     scene.add(grid);
 
-    // --- Spaceship Mesh ---
+    // Spaceship Mesh
     const shipGroup = new THREE.Group();
     const bodyGeo = new THREE.ConeGeometry(0.6, 2, 4);
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8, roughness: 0.2 });
@@ -149,7 +224,7 @@
     shipGroup.position.set(0, 0, 4);
     scene.add(shipGroup);
 
-    // --- Cubes Logic ---
+    // Cubes Mechanics
     const cubes = [];
     function spawnCube(isBoss = false) {
       const size = isBoss ? 1.2 : 0.4;
@@ -164,28 +239,17 @@
       cubes.push(mesh);
     }
 
-    // Spawn regular cross cubes frequently & Boss cubes rarely
     setInterval(() => spawnCube(false), 800);
     setInterval(() => spawnCube(true), 5000);
 
     camera.position.set(0, 6, 10);
     camera.lookAt(0, 0, 0);
 
-    // Controls
     function moveShip(dx, dz) {
       shipGroup.position.x = Math.max(-8, Math.min(8, shipGroup.position.x + dx));
       shipGroup.position.z = Math.max(-2, Math.min(6, shipGroup.position.z + dz));
     }
 
-    function boost(multi, tonAmt) {
-      const tonUrl = `https://app.tonkeeper.com/transfer/${DEST_WALLET}?amount=${parseFloat(tonAmt)*1000000000}&text=MHASpaceBoost${multi}x`;
-      window.open(tonUrl, '_blank');
-      multiplier = multi;
-      document.getElementById('rank-badge').innerText = `المضاعف الناري (${multi}x)`;
-      saveToFirebase();
-    }
-
-    // Touch & Click Event Handlers
     const bindBtn = (id, dx, dz) => {
       const el = document.getElementById(id);
       const handler = (e) => { e.preventDefault(); moveShip(dx, dz); };
@@ -208,18 +272,15 @@
     function animate() {
       requestAnimationFrame(animate);
 
-      // Grid Movement (Speed Effect)
       grid.position.z += 0.1;
       if (grid.position.z > 2) grid.position.z = 0;
 
-      // Cubes Movement & Collision
       for (let i = cubes.length - 1; i >= 0; i--) {
         const c = cubes[i];
         c.position.z += c.userData.speed;
         c.rotation.x += 0.02;
         c.rotation.y += 0.02;
 
-        // Collision Check
         if (shipGroup.position.distanceTo(c.position) < 1.2) {
           const reward = c.userData.isBoss ? (1.0 * multiplier) : (0.01 * multiplier);
           score = Math.min(maxCap, score + reward);
@@ -232,7 +293,6 @@
           continue;
         }
 
-        // Out of Bounds Cleanup
         if (c.position.z > 8) {
           scene.remove(c);
           cubes.splice(i, 1);
