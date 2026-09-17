@@ -1,1 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MHA Metaverse - Crystal Collector</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; background: #0f172a; font-family: system-ui, sans-serif; touch-action: none; }
+    #dpad {
+      position: absolute; bottom: 30px; left: 30px;
+      display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);
+      gap: 5px; z-index: 10;
+    }
+    .btn {
+      background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
+      color: white; border-radius: 12px; font-weight: bold; font-size: 18px;
+      display: flex; align-items: center; justify-content: center; user-select: none;
+    }
+    .btn:active { background: #2563eb; }
+    #btn-up { grid-column: 2; grid-row: 1; }
+    #btn-left { grid-column: 1; grid-row: 2; }
+    #btn-down { grid-column: 2; grid-row: 3; }
+    #btn-right { grid-column: 3; grid-row: 2; }
 
+    #ui {
+      position: absolute; top: 20px; right: 20px; left: 20px;
+      display: flex; justify-content: space-between; color: white;
+      background: rgba(0,0,0,0.6); padding: 10px 18px; border-radius: 12px; z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="ui">
+    <div>النقاط: <span id="points">0</span> MHA</div>
+    <div id="status">اقترب من البلورة 📍</div>
+  </div>
+
+  <div id="dpad">
+    <div class="btn" id="btn-up">▲</div>
+    <div class="btn" id="btn-left">◄</div>
+    <div class="btn" id="btn-down">▼</div>
+    <div class="btn" id="btn-right">►</div>
+  </div>
+
+  <script>
+    // 1. المشهد والضوء
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    // 2. الأرضية
+    const floorGeo = new THREE.PlaneGeometry(20, 20);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // 3. الشخصية
+    const playerGroup = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1, 16), bodyMat);
+    body.position.y = 0.5;
+    playerGroup.add(body);
+    scene.add(playerGroup);
+
+    // 4. البلورة الإشعاعية
+    const crystalGeo = new THREE.OctahedronGeometry(0.6, 0);
+    const crystalMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, roughness: 0.2 });
+    const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+    crystal.position.set(0, 1, -5);
+    scene.add(crystal);
+
+    const crystalLight = new THREE.PointLight(0x38bdf8, 2, 4);
+    crystalLight.position.set(0, 1, -5);
+    scene.add(crystalLight);
+
+    // 5. نظام حركة الشخصية
+    const cameraOffset = new THREE.Vector3(0, 5, 7);
+    const keys = { up: false, down: false, left: false, right: false };
+    let points = 0;
+    let isCollected = false;
+    let isAnimatingCollection = false;
+
+    const bindBtn = (id, key) => {
+      const el = document.getElementById(id);
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[key] = true; });
+      el.addEventListener('pointerup', (e) => { e.preventDefault(); keys[key] = false; });
+      el.addEventListener('pointerleave', () => { keys[key] = false; });
+    };
+    bindBtn('btn-up', 'up'); bindBtn('btn-down', 'down');
+    bindBtn('btn-left', 'left'); bindBtn('btn-right', 'right');
+
+    // 6. تأثير الجزيئات اللامعة عند الالتقاط
+    function createBurstParticles(position) {
+      const particleCount = 30;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const velocities = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = position.x;
+        positions[i * 3 + 1] = position.y;
+        positions[i * 3 + 2] = position.z;
+        velocities.push(
+          (Math.random() - 0.5) * 0.2,
+          (Math.random() - 0.5) * 0.2 + 0.1,
+          (Math.random() - 0.5) * 0.2
+        );
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const material = new THREE.PointsMaterial({
+        color: 0x38bdf8, size: 0.15, transparent: true, opacity: 1, blending: THREE.AdditiveBlending
+      });
+
+      const particleSystem = new THREE.Points(geometry, material);
+      scene.add(particleSystem);
+
+      function animateParticles() {
+        const posAttr = particleSystem.geometry.attributes.position;
+        for (let i = 0; i < particleCount; i++) {
+          posAttr.array[i * 3] += velocities[i].x;
+          posAttr.array[i * 3 + 1] += velocities[i].y;
+          posAttr.array[i * 3 + 2] += velocities[i].z;
+        }
+        posAttr.needsUpdate = true;
+        material.opacity -= 0.03;
+
+        if (material.opacity > 0) {
+          requestAnimationFrame(animateParticles);
+        } else {
+          scene.remove(particleSystem);
+          geometry.dispose();
+          material.dispose();
+        }
+      }
+      animateParticles();
+    }
+
+    // 7. دالة تحديث النقاط عبر API Firebase
+    async function claimCrystalReward(adId, authorId) {
+      document.getElementById('status').innerText = "جاري الحفظ...";
+      try {
+        const response = await fetch('/api/boost', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: adId, authorId: authorId })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
+          points = data.points;
+          document.getElementById('points').innerText = points;
+          document.getElementById('status').innerText = "تم الجمع بنجاح! 🎉";
+        } else {
+          document.getElementById('status').innerText = "خطأ في التجميع";
+        }
+      } catch (err) {
+        document.getElementById('status').innerText = "تعذر الاتصال بالسيرفر";
+      }
+    }
+
+    // 8. حلقة التحديث الرئيسية
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (!isCollected && !isAnimatingCollection) {
+        crystal.rotation.y += 0.02;
+        crystal.rotation.x += 0.01;
+
+        // اكتشاف التصادم
+        if (playerGroup.position.distanceTo(crystal.position) < 1.2) {
+          isAnimatingCollection = true;
+          createBurstParticles(crystal.position);
+
+          let scale = 1;
+          function popAnimation() {
+            scale += 0.08;
+            crystal.scale.set(scale, scale, scale);
+            crystalLight.intensity += 0.5;
+
+            if (scale < 1.8) {
+              requestAnimationFrame(popAnimation);
+            } else {
+              isCollected = true;
+              scene.remove(crystal);
+              scene.remove(crystalLight);
+              claimCrystalReward("-YourAdFirebaseID", "user_author_id");
+            }
+          }
+          popAnimation();
+        }
+      }
+
+      // تحريك الشخصية والكاميرا
+      const speed = 0.1;
+      if (keys.up && playerGroup.position.z > -9) playerGroup.position.z -= speed;
+      if (keys.down && playerGroup.position.z < 9) playerGroup.position.z += speed;
+      if (keys.left && playerGroup.position.x > -9) playerGroup.position.x -= speed;
+      if (keys.right && playerGroup.position.x < 9) playerGroup.position.x += speed;
+
+      camera.position.x = playerGroup.position.x + cameraOffset.x;
+      camera.position.y = playerGroup.position.y + cameraOffset.y;
+      camera.position.z = playerGroup.position.z + cameraOffset.z;
+      camera.lookAt(playerGroup.position);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
