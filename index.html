@@ -151,7 +151,7 @@
   <div class="progress-container">
     <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569;">
       <span>التقدم نحو السقف</span>
-      <span><span id="progress-text">0</span>% من 750M</span>
+      <span><span id="progress-text">0</span>% من 75</span>
     </div>
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progress-fill"></div>
@@ -161,8 +161,8 @@
   <!-- 5. أزرار التحكم والدفع -->
   <div class="action-bar">
     <div class="pay-group">
-      <button class="btn-pay" onclick="buyMultiplier(10, '0.10')">مضاعف 10x (0.10 TON)</button>
-      <button class="btn-pay gold" onclick="buyMultiplier(100, '1.00')">مضاعف 100x (1.00 TON)</button>
+      <button class="btn-pay" onclick="buyMultiplier(1000, '0.10')">مضاعف 1000x (0.10 TON)</button>
+      <button class="btn-pay gold" onclick="buyMultiplier(10000, '1.00')">مضاعف 10000x (1.00 TON)</button>
     </div>
     
     <div class="dpad">
@@ -187,7 +187,7 @@
     let score = 0.00;
     let multiplier = 1;
     let isPaused = false;
-    const maxCap = 750000000;
+    const maxCap = 7500000;
     const RECEIVER_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
 
     // --- TON Connect Setup (رابط الـ Manifest الجديد) ---
