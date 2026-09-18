@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MHASpace Metaverse PoC - TON Connected</title>
+  <title>MHASpace Metaverse - TON Edition</title>
   
   <!-- Three.js & Firebase -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -15,73 +15,150 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #050811; font-family: system-ui, sans-serif; color: #fff; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
     
+    /* شاشة الاستقبال الشفافة */
+    #welcome-modal {
+      position: absolute; inset: 0; z-index: 100;
+      background: rgba(248, 250, 252, 0.85); backdrop-filter: blur(16px);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 24px; text-align: center;
+    }
+    .welcome-card {
+      background: #ffffff; border: 2px solid #38bdf8; border-radius: 24px;
+      padding: 32px 24px; box-shadow: 0 20px 40px rgba(56, 189, 248, 0.2);
+      max-width: 380px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+    .welcome-card h1 { font-size: 26px; color: #0284c7; text-shadow: 0 2px 10px rgba(2, 132, 199, 0.2); }
+    .welcome-card p { font-size: 13px; color: #475569; line-height: 1.6; }
+
+    /* HUD الواجهة العلوية */
     .hud {
       position: absolute; top: 12px; left: 12px; right: 12px;
       display: flex; justify-content: space-between; align-items: center;
-      background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px);
-      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 16px;
-      padding: 10px 14px; z-index: 10;
+      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px;
+      padding: 10px 14px; z-index: 10; box-shadow: 0 8px 24px rgba(0,0,0,0.05);
     }
-    .badge { font-size: 11px; padding: 4px 8px; border-radius: 20px; background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold; }
-    .stats { text-align: left; dir: ltr; }
-    .stats .val { font-size: 16px; font-weight: bold; color: #38bdf8; }
-
-    #ton-connect-btn { z-index: 10; transform: scale(0.85); }
-
-    .cap-banner {
-      position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
-      background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fef08a;
-      padding: 5px 12px; border-radius: 20px; font-size: 11px; text-align: center; z-index: 10; width: 92%; max-width: 420px;
+    .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; border: 1px solid #38bdf8; font-weight: bold; }
+    
+    #pause-btn {
+      background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 16px;
+      width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
     }
 
+    /* شريط التقدم */
+    .progress-container {
+      position: absolute; top: 76px; left: 50%; transform: translateX(-50%);
+      width: 90%; max-width: 400px; z-index: 10;
+      background: rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 8px 12px;
+      border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    .progress-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #eab308); transition: width 0.3s; }
+
+    /* شاشة Pause التفاعلية */
+    #pause-modal {
+      position: absolute; inset: 0; z-index: 90;
+      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px);
+      display: none; flex-direction: column; justify-content: center; align-items: center; color: white;
+    }
+    .btn-resume {
+      background: linear-gradient(135deg, #38bdf8, #0284c7); border: none; color: white;
+      padding: 14px 32px; border-radius: 16px; font-size: 18px; font-weight: bold;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); cursor: pointer; animation: pulse 1.5s infinite;
+    }
+
+    /* أزرار التحفيز والدفع المضيئة */
     .action-bar {
-      position: absolute; bottom: 20px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 10;
+      position: absolute; bottom: 16px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 10;
     }
-    .pay-group { display: flex; gap: 8px; }
+    .pay-group { display: flex; gap: 10px; }
     .btn-pay {
-      background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: white;
-      padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: bold;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); cursor: pointer; touch-action: manipulation;
+      background: linear-gradient(135deg, #38bdf8, #0284c7); border: none; color: white;
+      padding: 10px 16px; border-radius: 14px; font-size: 12px; font-weight: bold;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5); cursor: pointer; animation: pulse 2s infinite;
     }
     .btn-pay.gold {
-      background: linear-gradient(135deg, #d97706, #b45309);
-      box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
     }
 
-    .dpad { display: grid; grid-template-columns: repeat(3, 46px); grid-gap: 6px; }
-    .dbtn {
-      width: 46px; height: 46px; background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; color: white; font-size: 18px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
     }
-    .dbtn:active { background: rgba(56, 189, 248, 0.5); }
+
+    /* لوحة التحكم الأسهم */
+    .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-gap: 6px; }
+    .dbtn {
+      width: 48px; height: 48px; background: rgba(255,255,255,0.8); backdrop-filter: blur(8px);
+      border: 1px solid #cbd5e1; border-radius: 14px; color: #0f172a; font-size: 18px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .dbtn:active { background: #38bdf8; color: white; }
+
+    /* تأثير الكبسولة الرقمية الطافية */
+    .floating-text {
+      position: absolute; color: #f59e0b; font-weight: bold; font-size: 20px;
+      pointer-events: none; animation: floatUp 0.8s ease-out forwards; z-index: 20;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+    }
   </style>
 </head>
 <body>
 
+  <!-- 1. شاشة الاستقبال لربط المحفظة -->
+  <div id="welcome-modal">
+    <div class="welcome-card">
+      <h1>MHASpace 🚀</h1>
+      <p>مرحباً بك في عالم MHASpace! يرجى ربط محفظة TON الخاصة بك لتسجيل الدخول واحتساب تقدمك ورصيدك مباشرة.</p>
+      <div id="welcome-ton-btn"></div>
+    </div>
+  </div>
+
+  <!-- 2. شاشة Pause الإيقاف المؤقت -->
+  <div id="pause-modal">
+    <h2 style="margin-bottom: 20px; font-size: 28px;">اللعبة متوقفة ⏸️</h2>
+    <button class="btn-resume" onclick="togglePause()">استئناف اللعب ▶️</button>
+  </div>
+
+  <!-- 3. HUD الواجهة الرئيسية -->
   <div class="hud">
-    <div>
-      <span class="badge" id="rank-badge">سفينة عادية (1x)</span>
-      <div style="font-size: 10px; margin-top: 4px; color: #4ade80;" id="db-status">مربوط مع Firebase ⚡</div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button id="pause-btn" onclick="togglePause()">⏸️</button>
+      <div>
+        <span class="badge" id="rank-badge">المضاعف (1x)</span>
+        <div style="font-size: 10px; margin-top: 2px; color: #16a34a;" id="db-status">مربوط مع Firebase ⚡</div>
+      </div>
     </div>
-    
-    <!-- زر TON Connect UI -->
     <div id="ton-connect-btn"></div>
-
-    <div class="stats">
-      <div style="font-size: 10px; color: #94a3b8; text-align: right;">رصيد MHA</div>
-      <div class="val"><span id="score-val">0.00</span> / 750M</div>
+    <div style="text-align: left; dir: ltr;">
+      <div style="font-size: 10px; color: #64748b; text-align: right;">رصيد MHA</div>
+      <div style="font-size: 16px; font-weight: bold; color: #0284c7;"><span id="score-val">0.00</span></div>
     </div>
   </div>
 
-  <div class="cap-banner">
-    🚀 المربعات الصغيرة: 0.01 MHA | الكبيرة: 1.0 MHA | السقف: 750,000,000
+  <!-- 4. شريط التقدم السقف 750M -->
+  <div class="progress-container">
+    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569;">
+      <span>التقدم نحو السقف</span>
+      <span><span id="progress-text">0</span>% من 750M</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
   </div>
 
+  <!-- 5. أزرار التحكم والدفع -->
   <div class="action-bar">
     <div class="pay-group">
       <button class="btn-pay" onclick="buyMultiplier(10, '0.10')">مضاعف 10x (0.10 TON)</button>
@@ -90,6 +167,7 @@
     
     <div class="dpad">
       <div></div><div class="dbtn" id="btn-up">▲</div><div></div>
+      <!-- تم تصحيح الاتجاهات هنا -->
       <div class="dbtn" id="btn-left">◄</div><div></div><div class="dbtn" id="btn-right">►</div>
       <div></div><div class="dbtn" id="btn-down">▼</div><div></div>
     </div>
@@ -98,45 +176,49 @@
   <div id="canvas-container"></div>
 
   <script>
-    // --- 1. Firebase Configuration ---
+    // --- Firebase Setup ---
     const firebaseConfig = {
       databaseURL: "https://mhaspace-97691-default-rtdb.europe-west1.firebasedatabase.app/"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Key Variables
-    let userWalletAddress = null; // سيتم تحديثه عند اتصال المحفظة
+    let userWalletAddress = null;
     let score = 0.00;
     let multiplier = 1;
+    let isPaused = false;
     const maxCap = 750000000;
     const RECEIVER_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
 
-    // --- 2. TON Connect Integration ---
+    // --- TON Connect Setup (رابط الـ Manifest الجديد) ---
     const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-        manifestUrl: 'https://mohamed-habish-official.pages.dev/tonconnect-manifest.json',
+        manifestUrl: 'https://mhaspace.hebishalex-fb0.workers.dev/tonconnect-manifest.json',
         buttonRootId: 'ton-connect-btn'
     });
 
-    // الاستماع لحالة اتصال المحفظة
-    tonConnectUI.onStatusChange(wallet => {
-      if (wallet) {
-        userWalletAddress = wallet.account.address;
-        document.getElementById('db-status').innerText = "المحفظة متصلة 🔗";
-        loadUserDataFromFirebase(userWalletAddress);
-      } else {
-        userWalletAddress = null;
-        document.getElementById('db-status').innerText = "غير متصل بالمحفظة ⚠️";
-      }
+    // زر محفظة إضافي لشاشة الاستقبال
+    const welcomeTonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://mhaspace.hebishalex-fb0.workers.dev/tonconnect-manifest.json',
+        buttonRootId: 'welcome-ton-btn'
     });
 
-    // --- 3. Firebase Read/Write Logic ---
+    function handleWalletConnect(wallet) {
+      if (wallet) {
+        userWalletAddress = wallet.account.address;
+        document.getElementById('welcome-modal').style.display = 'none';
+        document.getElementById('db-status').innerText = "المحفظة متصلة 🔗";
+        loadUserDataFromFirebase(userWalletAddress);
+      }
+    }
+
+    tonConnectUI.onStatusChange(handleWalletConnect);
+    welcomeTonConnectUI.onStatusChange(handleWalletConnect);
+
+    // --- Firebase Read/Write ---
     function saveToFirebase() {
-      // نستخدم عنوان المحفظة كـ Key رئيسي إذا وُجد، وإلا نستخدم حساباً مؤقتاً
-      const storageKey = userWalletAddress || "guest_player";
-      
-      db.ref('players/' + storageKey).set({
-        wallet: userWalletAddress || "Not Connected",
+      if (!userWalletAddress) return;
+      db.ref('players/' + userWalletAddress).set({
+        wallet: userWalletAddress,
         score: score,
         multiplier: multiplier,
         lastActive: Date.now()
@@ -149,48 +231,51 @@
         if (data) {
           score = data.score || 0.00;
           multiplier = data.multiplier || 1;
-          document.getElementById('score-val').innerText = score.toFixed(2);
-          document.getElementById('rank-badge').innerText = `المضاعف (${multiplier}x)`;
+          updateUI();
         }
       });
     }
 
-    // --- 4. TON Payment Transaction ---
+    function updateUI() {
+      document.getElementById('score-val').innerText = score.toFixed(2);
+      document.getElementById('rank-badge').innerText = `المضاعف (${multiplier}x)`;
+      
+      const percentage = Math.min(100, (score / maxCap) * 100).toFixed(4);
+      document.getElementById('progress-text').innerText = percentage;
+      document.getElementById('progress-fill').style.width = Math.max(1, percentage) + '%';
+    }
+
+    // --- Pause System ---
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('pause-modal').style.display = isPaused ? 'flex' : 'none';
+    }
+
+    // --- TON Payment Transaction ---
     async function buyMultiplier(multi, tonAmount) {
       if (!userWalletAddress) {
         alert("يرجى ربط محفظة TON أولاً لتأكيد المعاملة!");
         return;
       }
-
-      const nanoTon = Math.floor(parseFloat(tonAmount) * 1000000000); // تحويل TON إلى NanoTON
-
+      const nanoTon = Math.floor(parseFloat(tonAmount) * 1000000000);
       const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 60, // صلاحية المعاملة 60 ثانية
-        messages: [
-          {
-            address: RECEIVER_WALLET,
-            amount: nanoTon.toString()
-          }
-        ]
+        validUntil: Math.floor(Date.now() / 1000) + 60,
+        messages: [{ address: RECEIVER_WALLET, amount: nanoTon.toString() }]
       };
-
       try {
         await tonConnectUI.sendTransaction(transaction);
-        // عند نجاح الدفع على الشبكة:
         multiplier = multi;
-        document.getElementById('rank-badge').innerText = `المضاعف الناري (${multi}x)`;
+        updateUI();
         saveToFirebase();
         alert(`تم تفعيل مضاعف ${multi}x بنجاح!`);
-      } catch (e) {
-        console.error("Payment failed or cancelled:", e);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // --- 5. Three.js Game Engine ---
+    // --- Three.js Engine (ثيم فاتح وبصري نيون) ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050811);
-    scene.fog = new THREE.FogExp2(0x050811, 0.03);
+    scene.background = new THREE.Color(0xf8fafc); // خلفية فاتحة وانسيابية
+    scene.fog = new THREE.FogExp2(0xf8fafc, 0.025);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -198,25 +283,26 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0x38bdf8, 1.5);
-    light.position.set(0, 10, 10);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const light = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    light.position.set(5, 12, 10);
     scene.add(light);
 
-    const grid = new THREE.GridHelper(100, 50, 0x0284c7, 0x1e293b);
+    // الشبكة الأرضية المضيئة
+    const grid = new THREE.GridHelper(100, 50, 0x38bdf8, 0xcbd5e1);
     grid.position.y = -1;
     scene.add(grid);
 
-    // Spaceship Mesh
+    // المركبة
     const shipGroup = new THREE.Group();
     const bodyGeo = new THREE.ConeGeometry(0.6, 2, 4);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.8, roughness: 0.2 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.5, roughness: 0.1 });
     const shipBody = new THREE.Mesh(bodyGeo, bodyMat);
     shipBody.rotation.x = Math.PI / 2;
     shipGroup.add(shipBody);
 
     const wingGeo = new THREE.BoxGeometry(2, 0.1, 0.8);
-    const wingMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
     const wings = new THREE.Mesh(wingGeo, wingMat);
     wings.position.z = 0.3;
     shipGroup.add(wings);
@@ -224,28 +310,30 @@
     shipGroup.position.set(0, 0, 4);
     scene.add(shipGroup);
 
-    // Cubes Mechanics
+    // المكعبات
     const cubes = [];
     function spawnCube(isBoss = false) {
       const size = isBoss ? 1.2 : 0.4;
-      const color = isBoss ? 0xeab308 : 0x38bdf8;
+      const color = isBoss ? 0xf59e0b : 0x0284c7;
       const geo = new THREE.BoxGeometry(size, size, size);
-      const mat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+      const mat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.6 });
       const mesh = new THREE.Mesh(geo, mat);
       
       mesh.position.set((Math.random() - 0.5) * 16, 0, -30);
-      mesh.userData = { isBoss: isBoss, speed: 0.15 + Math.random() * 0.1 };
+      mesh.userData = { isBoss: isBoss, speed: 0.15 + Math.random() * 0.1, floatOffset: Math.random() * Math.PI };
       scene.add(mesh);
       cubes.push(mesh);
     }
 
-    setInterval(() => spawnCube(false), 800);
-    setInterval(() => spawnCube(true), 5000);
+    setInterval(() => { if (!isPaused) spawnCube(false); }, 800);
+    setInterval(() => { if (!isPaused) spawnCube(true); }, 5000);
 
     camera.position.set(0, 6, 10);
     camera.lookAt(0, 0, 0);
 
+    // --- تصحيح حركة الأسهم ---
     function moveShip(dx, dz) {
+      if (isPaused) return;
       shipGroup.position.x = Math.max(-8, Math.min(8, shipGroup.position.x + dx));
       shipGroup.position.z = Math.max(-2, Math.min(6, shipGroup.position.z + dz));
     }
@@ -259,8 +347,19 @@
 
     bindBtn('btn-up', 0, -0.5);
     bindBtn('btn-down', 0, 0.5);
-    bindBtn('btn-left', -0.5, 0);
-    bindBtn('btn-right', 0.5, 0);
+    bindBtn('btn-left', -0.5, 0);  // تم التعديل
+    bindBtn('btn-right', 0.5, 0);  // تم التعديل
+
+    // النص الطافي عند التقاط مكعب ذهبي
+    function showFloatingText(text) {
+      const el = document.createElement('div');
+      el.className = 'floating-text';
+      el.innerText = text;
+      el.style.left = (window.innerWidth / 2) + 'px';
+      el.style.top = (window.innerHeight / 2) + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 800);
+    }
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -268,34 +367,43 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Animation Loop
+    // الحلقة الرئيسية Animation Loop
     function animate() {
       requestAnimationFrame(animate);
 
-      grid.position.z += 0.1;
-      if (grid.position.z > 2) grid.position.z = 0;
+      if (!isPaused) {
+        grid.position.z += 0.1;
+        if (grid.position.z > 2) grid.position.z = 0;
 
-      for (let i = cubes.length - 1; i >= 0; i--) {
-        const c = cubes[i];
-        c.position.z += c.userData.speed;
-        c.rotation.x += 0.02;
-        c.rotation.y += 0.02;
+        for (let i = cubes.length - 1; i >= 0; i--) {
+          const c = cubes[i];
+          c.position.z += c.userData.speed;
+          c.rotation.x += 0.02;
+          c.rotation.y += 0.02;
 
-        if (shipGroup.position.distanceTo(c.position) < 1.2) {
-          const reward = c.userData.isBoss ? (1.0 * multiplier) : (0.01 * multiplier);
-          score = Math.min(maxCap, score + reward);
-          document.getElementById('score-val').innerText = score.toFixed(2);
-          
-          saveToFirebase();
+          // اهتزاز المكعب الذهبي
+          if (c.userData.isBoss) {
+            c.position.y = Math.sin(Date.now() * 0.005 + c.userData.floatOffset) * 0.3;
+          }
 
-          scene.remove(c);
-          cubes.splice(i, 1);
-          continue;
-        }
+          if (shipGroup.position.distanceTo(c.position) < 1.2) {
+            const reward = c.userData.isBoss ? (1.0 * multiplier) : (0.01 * multiplier);
+            score = Math.min(maxCap, score + reward);
+            
+            if (c.userData.isBoss) showFloatingText(`+${(1.0 * multiplier).toFixed(2)} MHA 🌟`);
 
-        if (c.position.z > 8) {
-          scene.remove(c);
-          cubes.splice(i, 1);
+            updateUI();
+            saveToFirebase();
+
+            scene.remove(c);
+            cubes.splice(i, 1);
+            continue;
+          }
+
+          if (c.position.z > 8) {
+            scene.remove(c);
+            cubes.splice(i, 1);
+          }
         }
       }
 
