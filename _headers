@@ -1,0 +1,6 @@
+/tonconnect-manifest.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/json
+
+/icon.png
+  Access-Control-Allow-Origin: *
