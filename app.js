@@ -14,9 +14,22 @@ let userWalletApp = null;
 let score = 0.00;
 let multiplier = 1;
 let isPaused = false;
+let isDataLoaded = false; // لمنع الكتابة في الفايربيس قبل تحميل بيانات المستخدم الأصلية
 const maxCap = 7500000;
 const RECEIVER_WALLET = "UQAqK_qhqpc_lMlh2SVmaqjbR4XfmkIhPdPVoUukb1aYHTG9";
 const MANIFEST_URL = 'https://mhaspace.hebishalex-fb0.workers.dev/tonconnect-manifest.json';
+
+// --- Get Reliable Telegram/User ID ---
+function getUserId() {
+  const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (telegramUser && telegramUser.id) {
+    return telegramUser.id.toString();
+  }
+  if (userWalletAddress) {
+    return userWalletAddress;
+  }
+  return "GUEST_USER";
+}
 
 // --- TON Connect UI Setup ---
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -29,7 +42,7 @@ const welcomeTonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     buttonRootId: 'welcome-ton-btn'
 });
 
-// معالجة الاتصال بنجاح وتوجيه المستخدم
+// معالجة الاتصال بالمحفظة وتحديث بياناتها فقط
 function handleWalletConnect(wallet) {
   if (wallet) {
     userWalletAddress = wallet.account.address;
@@ -37,13 +50,13 @@ function handleWalletConnect(wallet) {
 
     document.getElementById('welcome-modal').style.display = 'none';
     document.getElementById('db-status').innerText = `متصل عبر ${userWalletApp} 🔗`;
-
-    loadUserDataFromFirebase(userWalletAddress);
   } else {
     userWalletAddress = null;
     document.getElementById('welcome-modal').style.display = 'flex';
     document.getElementById('db-status').innerText = "غير متصل بالمحفظة";
   }
+  // حفظ عنوان المحفظة الجديد دون المساس بالرصيد
+  saveToFirebase();
 }
 
 tonConnectUI.onStatusChange(handleWalletConnect);
@@ -51,10 +64,10 @@ welcomeTonConnectUI.onStatusChange(handleWalletConnect);
 
 // --- Firebase Read/Write ---
 function saveToFirebase() {
-  const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const userId = telegramUser ? telegramUser.id : (userWalletAddress || "GUEST_USER");
+  if (!isDataLoaded) return; // حماية: عدم الكتابة في القاعدة إذا لم يتم التحميل أولاً
 
-  if (!userId) return;
+  const userId = getUserId();
+  if (!userId || userId === "GUEST_USER") return;
 
   db.ref('players/' + userId).update({
     tonWallet: userWalletAddress || "",
@@ -66,19 +79,25 @@ function saveToFirebase() {
   });
 }
 
-function loadUserDataFromFirebase(address) {
-  const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const userId = telegramUser ? telegramUser.id : address;
+function loadUserDataFromFirebase() {
+  const userId = getUserId();
 
   db.ref('players/' + userId).once('value').then((snapshot) => {
     const data = snapshot.val();
     if (data) {
-      score = data.score || 0.00;
+      score = typeof data.score === 'number' ? data.score : 0.00;
       multiplier = data.multiplier || 1;
-      updateUI();
     }
+    isDataLoaded = true; // تم التحميل بنجاح، يمكن الآن السماح بالحفظ
+    updateUI();
+  }).catch((error) => {
+    console.error("خطأ في جلب البيانات:", error);
+    isDataLoaded = true;
   });
 }
+
+// جلب بيانات المستخدم فور فتح الصفحة فوراً بناءً على معرف التليجرام
+loadUserDataFromFirebase();
 
 function updateUI() {
   document.getElementById('score-val').innerText = score.toFixed(2);
