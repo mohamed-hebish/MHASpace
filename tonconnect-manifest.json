@@ -1,6 +1,7 @@
 {
-  "url": "https://mhaspace.hebishalex-fb0.workers.dev/",
-  "name": "MHASpace",
+  "url": "https://mhaspace.hebishalex-fb0.workers.dev",
+  "name": "MHA Space Mini App",
   "iconUrl": "https://mhaspace.hebishalex-fb0.workers.dev/icon.png",
-  "termsOfDeliveryUrl": "https://mhaspace.hebishalex-fb0.workers.dev/"
+  "termsOfDeliveryUrl": "https://mhaspace.hebishalex-fb0.workers.dev/landing.html",
+  "privacyPolicyUrl": "https://mhaspace.hebishalex-fb0.workers.dev/landing.html"
 }
