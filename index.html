@@ -3,29 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MHASpace Metaverse Game</title>
+  <title>MHASpace Mini App</title>
   
-  <!-- Telegram WebApp SDK -->
+  <!-- Telegram Web App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- TON Connect SDK -->
-  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
   
   <!-- Three.js Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
-  <!-- Firebase App & Database -->
+  <!-- TON Connect UI SDK -->
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
       user-select: none;
       -webkit-user-select: none;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
     }
 
     body, html {
@@ -33,55 +32,25 @@
       height: 100%;
       overflow: hidden;
       background-color: #030712;
-      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #ffffff;
     }
 
-    /* 🌌 Three.js Canvas Container */
     #canvas-container {
-      width: 100%;
-      height: 100%;
       position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
       z-index: 1;
     }
 
-    /* 🚀 Splash Loader Screen (شاشة التحميل رقم 8) */
-    #splash-loader {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #030712;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
-
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(56, 189, 248, 0.2);
-      border-top: 4px solid #38bdf8;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* 📊 HUD Top Bar UI (رقم 4 و 7) */
+    /* UI Overlay Header */
     #ui-container {
       position: absolute;
-      top: 15px;
-      left: 15px;
-      right: 15px;
+      top: 12px;
+      left: 12px;
+      right: 12px;
       z-index: 10;
       display: flex;
       flex-direction: column;
@@ -89,49 +58,58 @@
       pointer-events: none;
     }
 
-    .hud-card {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      border-radius: 16px;
-      padding: 12px 16px;
+    .top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      pointer-events: auto;
-    }
-
-    .score-title {
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    .score-value {
-      font-size: 20px;
-      font-weight: bold;
-      color: #38bdf8;
-      text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
-    }
-
-    .badge {
-      background: rgba(56, 189, 248, 0.15);
-      border: 1px solid #38bdf8;
-      color: #38bdf8;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    /* شريط تقدم التوزيع (Global Airdrop Progress Bar) */
-    .progress-box {
-      width: 100%;
       background: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 16px;
+      padding: 10px 16px;
+      pointer-events: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    #rank-badge {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.3px;
+    }
+
+    /* Progress Bar Container */
+    .progress-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
       border-radius: 12px;
-      padding: 8px 12px;
+      padding: 8px 14px;
       pointer-events: auto;
     }
 
@@ -140,204 +118,335 @@
       justify-content: space-between;
       font-size: 11px;
       color: #cbd5e1;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      font-weight: 600;
     }
 
-    .progress-bar-bg {
+    .progress-track {
       width: 100%;
       height: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 10px;
       overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .progress-bar-fill {
+    .progress-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #0284c7, #38bdf8);
-      border-radius: 4px;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      box-shadow: 0 0 12px #38bdf8;
       transition: width 0.3s ease;
+      border-radius: 10px;
     }
 
-    /* 🎮 D-Pad Controls Area */
+    /* Controls Overlay */
     #controls-container {
       position: absolute;
-      bottom: 25px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 24px;
+      left: 0;
+      right: 0;
       z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 20px;
+      pointer-events: none;
+    }
+
+    .dpad {
       display: grid;
-      grid-template-columns: repeat(3, 60px);
-      grid-template-rows: repeat(2, 60px);
-      gap: 10px;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(3, 52px);
+      gap: 6px;
+      pointer-events: auto;
     }
 
     .control-btn {
-      width: 60px;
-      height: 60px;
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(15, 23, 42, 0.8);
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
       color: #38bdf8;
       font-size: 20px;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       cursor: pointer;
       touch-action: manipulation;
       transition: all 0.1s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .control-btn:active {
-      background: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.3);
+      transform: scale(0.92);
+    }
+
+    .action-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 16px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:active {
       transform: scale(0.95);
     }
 
-    #btn-up { grid-column: 2; grid-row: 1; }
-    #btn-left { grid-column: 1; grid-row: 2; }
-    #btn-down { grid-column: 2; grid-row: 2; }
-    #btn-right { grid-column: 3; grid-row: 2; }
-
-    /* 🔲 Modals Structure */
+    /* Modals & Overlays */
     .modal-overlay {
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(3, 7, 18, 0.85);
-      backdrop-filter: blur(8px);
+      background: rgba(3, 7, 18, 0.88);
+      backdrop-filter: blur(16px);
       z-index: 100;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
     }
 
     .modal-card {
-      background: #0f172a;
+      background: rgba(15, 23, 42, 0.9);
       border: 1px solid rgba(56, 189, 248, 0.3);
-      border-radius: 20px;
-      padding: 24px;
+      border-radius: 24px;
+      padding: 28px 20px;
       width: 100%;
       max-width: 360px;
-      text-align: center;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
     }
 
-    .modal-card h2 {
-      color: #38bdf8;
-      margin-bottom: 12px;
+    .modal-title {
       font-size: 20px;
+      font-weight: 800;
+      color: #f8fafc;
     }
 
-    .modal-card p {
+    .modal-desc {
+      font-size: 13px;
       color: #94a3b8;
-      font-size: 14px;
-      margin-bottom: 20px;
       line-height: 1.5;
     }
 
-    .btn-action {
-      background: linear-gradient(135deg, #0284c7, #38bdf8);
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: bold;
+    .shop-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       width: 100%;
-      cursor: pointer;
-      margin-top: 8px;
     }
 
-    /* Floating Reward Animation */
+    .shop-item {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .shop-item:hover, .shop-item:active {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    .shop-item-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .shop-item-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .shop-item-sub {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .btn-buy {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Floating VFX Text */
     .floating-text {
       position: absolute;
+      transform: translate(-50%, -50%);
       color: #f59e0b;
-      font-weight: bold;
-      font-size: 20px;
+      font-size: 18px;
+      font-weight: 900;
       pointer-events: none;
-      animation: floatUp 0.8s ease-out forwards;
       z-index: 50;
+      animation: floatUp 0.8s ease-out forwards;
+      text-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
     }
 
     @keyframes floatUp {
-      0% { opacity: 1; transform: translate(-50%, 0); }
-      100% { opacity: 0; transform: translate(-50%, -50px); }
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+      50% { transform: translate(-50%, -100%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+    }
+
+    /* Splash Loader */
+    #splash-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #030712;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(56, 189, 248, 0.15);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
 
-  <!-- 🚀 1. Splash Loader (شاشة التحميل) -->
+  <!-- Splash Loader Screen -->
   <div id="splash-loader">
     <div class="spinner"></div>
-    <h3 style="color: #38bdf8; font-size: 18px;">جاري تحميل MHASpace...</h3>
-    <p style="color: #64748b; font-size: 12px; margin-top: 8px;">مزامنة بيانات الفضاء وربط الفايربيس</p>
+    <div style="font-size: 14px; color: #94a3b8; font-weight: 600;">جاري تحميل MHASpace...</div>
   </div>
 
-  <!-- 🌌 2. Three.js Canvas -->
+  <!-- 3D Canvas Background -->
   <div id="canvas-container"></div>
 
-  <!-- 📊 3. Top HUD UI Container -->
+  <!-- Top UI Header Overlay -->
   <div id="ui-container">
-    <div class="hud-card">
-      <div>
-        <div class="score-title">رصيد التعدين (MHA)</div>
-        <div class="score-value" id="score-val">0.00</div>
+    <div class="top-bar">
+      <div class="stat-box">
+        <span class="stat-label">رصيد MHA</span>
+        <span id="score-val" class="stat-value">0.00</span>
       </div>
-      <div>
-        <span class="badge" id="rank-badge">المضاعف (1x)</span>
-        <button onclick="togglePause()" style="background: none; border: none; color: #94a3b8; font-size: 18px; margin-right: 8px; cursor: pointer;">⏸️</button>
-      </div>
+      <div id="rank-badge">Rookie Cadet 🛸 | 1x</div>
     </div>
 
-    <!-- Global Progress Bar -->
-    <div class="progress-box">
+    <!-- Personal Million Progress Card -->
+    <div class="progress-card">
       <div class="progress-header">
-        <span>نسبة التعدين العالمي</span>
-        <span><span id="progress-text">0.0000</span>%</span>
+        <span>تقدم المليون الحالي</span>
+        <span><span id="progress-text">0.00</span>%</span>
       </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-fill"></div>
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill"></div>
       </div>
-      <div style="font-size: 10px; color: #64748b; margin-top: 4px; text-align: left;" id="db-status">جاري التحقق من المحفظة...</div>
     </div>
-
-    <!-- TON Connect Header Button Container -->
-    <div id="ton-connect-btn" style="display: flex; justify-content: flex-end; margin-top: 4px;"></div>
   </div>
 
-  <!-- 🎮 4. D-Pad Directional Controls -->
+  <!-- Bottom Control D-Pad & Actions -->
   <div id="controls-container">
-    <button class="control-btn" id="btn-up">▲</button>
-    <button class="control-btn" id="btn-left">◄</button>
-    <button class="control-btn" id="btn-down">▼</button>
-    <button class="control-btn" id="btn-right">►</button>
-  </div>
+    <div class="dpad">
+      <div></div>
+      <button id="btn-up" class="control-btn">▲</button>
+      <div></div>
+      <button id="btn-left" class="control-btn">◄</button>
+      <button id="btn-down" class="control-btn">▼</button>
+      <button id="btn-right" class="control-btn">►</button>
+    </div>
 
-  <!-- 🔌 5. Welcome Wallet Connect Modal (تظهر في حال عدم الربط) -->
-  <div class="modal-overlay" id="welcome-modal" style="display: none;">
-    <div class="modal-card">
-      <h2>مرحباً بك في MHASpace 🚀</h2>
-      <p>قم بربط محفظة TON الخاصة بك لحفظ تقدم التعدين والحصول على مكافآت الإحالات!</p>
-      <div id="welcome-ton-btn" style="display: flex; justify-content: center; margin-bottom: 12px;"></div>
+    <div class="action-panel">
+      <div id="ton-connect-btn"></div>
+      <button class="btn-action" onclick="togglePause()">⚡ المتجر والترقية</button>
     </div>
   </div>
 
-  <!-- ⏸️ 6. Pause Modal -->
-  <div class="modal-overlay" id="pause-modal" style="display: none;">
+  <!-- Welcome / Wallet Connect Modal -->
+  <div id="welcome-modal" class="modal-overlay">
     <div class="modal-card">
-      <h2>اللعبة متوقفة مؤقتاً ⏸️</h2>
-      <p>يمكنك شراء مضاعفات النقاط لزيادة سرعة التعدين عبر TON</p>
-      <button class="btn-action" onclick="buyMultiplier(2, '0.5')">تفعيل مضاعف 2x (0.5 TON)</button>
-      <button class="btn-action" onclick="buyMultiplier(5, '1.0')" style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 8px;">تفعيل مضاعف 5x (1.0 TON)</button>
-      <button class="btn-action" onclick="togglePause()" style="background: transparent; border: 1px solid #64748b; margin-top: 12px;">متابعة اللعب</button>
+      <div class="modal-title">مرحباً بك في MHASpace 🚀</div>
+      <div class="modal-desc">قم بربط محفظة TON الخاصة بك لبدء التعدين والتفاعل وتوثيق الإحالات وتراكم المضاعفات!</div>
+      <div id="welcome-ton-btn" style="margin-top: 8px;"></div>
     </div>
   </div>
 
-  <!-- Main Game Logic Script -->
-  <script src="app.js"></script>
+  <!-- Pause & Shop Modal -->
+  <div id="pause-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-title">متجر مضاعفات السرعة ⚡</div>
+      <div class="modal-desc">اشترِ مضاعفات لتسريع الوصول للمليون الحالي! تتراكم المضاعفات بالشراء المتكرر، وتُعاد للوضع الافتراضي عند كسر كل مليون.</div>
+      
+      <div class="shop-options">
+        <div class="shop-item" onclick="buyMultiplier(2, 0.5)">
+          <div class="shop-item-info">
+            <span class="shop-item-title">مضاعف 2x (Double Speed)</span>
+            <span class="shop-item-sub">تراكمي مع المضاعف الحالي</span>
+          </div>
+          <button class="btn-buy">0.5 TON</button>
+        </div>
+
+        <div class="shop-item" onclick="buyMultiplier(5, 1.0)">
+          <div class="shop-item-info">
+            <span class="shop-item-title">مضاعف 5x (Hyper Speed)</span>
+            <span class="shop-item-sub">تراكمي مع المضاعف الحالي</span>
+          </div>
+          <button class="btn-buy">1.0 TON</button>
+        </div>
+      </div>
+
+      <div id="db-status" style="font-size: 11px; color: #64748b; margin-top: 4px;">غير متصل بالمحفظة</div>
+      
+      <button class="btn-action" style="width: 100%; background: #334155; margin-top: 8px;" onclick="togglePause()">العودة للعب 🎮</button>
+    </div>
+  </div>
+
+  <!-- Core App Logic -->
+  <script src="js/app.js"></script>
 </body>
 </html>
