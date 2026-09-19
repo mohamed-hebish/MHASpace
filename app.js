@@ -1,6 +1,6 @@
 /* ==========================================
    MHASpace Metaverse - Complete Core Logic
-   Includes: Isolated Referrals (10k MHA Bonus), Visual VFX,
+   Includes: Isolated Referrals (100 MHA Bonus), Visual VFX,
    Starfield, Global Progress, Splash Loader & Safe Firebase Persistence
    ========================================== */
 
@@ -52,7 +52,7 @@ const welcomeTonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     buttonRootId: 'welcome-ton-btn'
 });
 
-// معالجة اتصال المحفظة وتفعيل مكافأة الإحالة الناجحة (10,000 MHA)
+// معالجة اتصال المحفظة وتفعيل مكافأة الإحالة الناجحة (100 MHA)
 function handleWalletConnect(wallet) {
   if (wallet) {
     userWalletAddress = wallet.account.address;
@@ -62,7 +62,7 @@ function handleWalletConnect(wallet) {
     if (welcomeModal) welcomeModal.style.display = 'none';
     
     const dbStatus = document.getElementById('db-status');
-    if (dbStatus) dbStatus.innerText = `متصل عبر ${userWalletApp} 🔗`;
+    if (dbStatus) dbStatus.innerText = 'متصل عبر ' + userWalletApp + ' 🔗';
 
     // معالجة مكافأة الداعي مرة واحدة فقط عند توثيق المحفظة لأول مرة
     processReferralBonusOnConnect();
@@ -80,7 +80,7 @@ function handleWalletConnect(wallet) {
 tonConnectUI.onStatusChange(handleWalletConnect);
 welcomeTonConnectUI.onStatusChange(handleWalletConnect);
 
-// --- Referral Processing (10,000 MHA for Successful Referral) ---
+// --- Referral Processing (100 MHA for Successful Referral) ---
 function processReferralBonusOnConnect() {
   const currentUserId = getUserId();
   const referrerId = getReferrerId();
@@ -90,9 +90,9 @@ function processReferralBonusOnConnect() {
   const refCheckRef = db.ref('players/' + currentUserId + '/referredByProcessed');
   refCheckRef.once('value').then((snapshot) => {
     if (!snapshot.exists() || !snapshot.val()) {
-      // تسليم 10,000 MHA للداعي في قائمة المكافآت المستقلة
+      // تسليم 100 MHA للداعي في قائمة المكافآت المستقلة
       db.ref('players/' + referrerId + '/unclaimedRefBonus').transaction((currentBonus) => {
-        return (currentBonus || 0) + 10000;
+        return (currentBonus || 0) + 100;
       });
 
       // زيادة عداد الإحالات الناجحة
@@ -119,7 +119,7 @@ function checkPendingReferralBonuses(userId) {
       saveToFirebase();
 
       // تنبيه بالمفاجأة
-      alert(`🎁 مفاجأة! لقد حصلت على ${bonusAmount.toLocaleString()} MHA مقابل إحالة ناجحة قامت بربط المحفظة!`);
+      alert('🎁 مفاجأة! لقد حصلت على ' + bonusAmount.toLocaleString() + ' MHA مقابل إحالة ناجحة قامت بربط المحفظة!');
     }
   });
 }
@@ -170,17 +170,25 @@ loadUserDataFromFirebase();
 
 function updateUI() {
   const scoreEl = document.getElementById('score-val');
-  if (scoreEl) scoreEl.innerText = score.toFixed(2);
-  
+  if (scoreEl) {
+    scoreEl.innerText = score.toFixed(2);
+  }
+
   const rankEl = document.getElementById('rank-badge');
-  if (rankEl) rankEl.innerText = `المضاعف (${multiplier}x)`;
-  
+  if (rankEl) {
+    rankEl.innerText = 'المضاعف (' + multiplier + 'x)';
+  }
+
   const percentage = Math.min(100, (score / maxCap) * 100).toFixed(4);
   const progText = document.getElementById('progress-text');
-  if (progText) progText.innerText = percentage;
+  if (progText) {
+    progText.innerText = percentage;
+  }
 
   const progFill = document.getElementById('progress-fill');
-  if (progFill) progFill.style.width = Math.max(1, percentage) + '%';
+  if (progFill) {
+    progFill.style.width = Math.max(1, percentage) + '%';
+  }
 }
 
 // --- Pause System ---
@@ -206,7 +214,7 @@ async function buyMultiplier(multi, tonAmount) {
     multiplier = multi;
     updateUI();
     saveToFirebase();
-    alert(`تم تفعيل مضاعف ${multi}x بنجاح!`);
+    alert('تم تفعيل مضاعف ' + multi + 'x بنجاح!');
   } catch (e) { console.error(e); }
 }
 
@@ -410,7 +418,7 @@ function animate() {
         // إطلاق انفجار الجزيئات البصرية (VFX)
         createExplosion(c.position, c.userData.isBoss ? 0xf59e0b : 0x38bdf8);
 
-        if (c.userData.isBoss) showFloatingText(`+${(1.0 * multiplier).toFixed(2)} MHA 🌟`);
+        if (c.userData.isBoss) showFloatingText('+' + (1.0 * multiplier).toFixed(2) + ' MHA 🌟');
 
         updateUI();
         saveToFirebase();
