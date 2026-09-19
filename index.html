@@ -221,9 +221,11 @@
       border-radius: 20px;
       padding: 24px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       text-align: center;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .modal-card h2 {
@@ -235,7 +237,7 @@
     .modal-card p {
       color: #94a3b8;
       font-size: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       line-height: 1.5;
     }
 
@@ -243,12 +245,27 @@
       background: linear-gradient(135deg, #0284c7, #38bdf8);
       color: #fff;
       border: none;
-      padding: 12px 24px;
+      padding: 12px 16px;
       border-radius: 12px;
       font-weight: bold;
       width: 100%;
       cursor: pointer;
       margin-top: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-stars {
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+      color: #fff;
+    }
+
+    .btn-stars-gold {
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      color: #fff;
     }
 
     /* Floating Reward Animation */
@@ -330,10 +347,17 @@
   <div class="modal-overlay" id="pause-modal" style="display: none;">
     <div class="modal-card">
       <h2>اللعبة متوقفة مؤقتاً ⏸️</h2>
-      <p>يمكنك شراء مضاعفات النقاط لزيادة سرعة التعدين عبر TON</p>
-      <button class="btn-action" onclick="buyMultiplier(2, '0.5')">تفعيل مضاعف 2x (0.5 TON)</button>
-      <button class="btn-action" onclick="buyMultiplier(5, '1.0')" style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 8px;">تفعيل مضاعف 5x (1.0 TON)</button>
-      <button class="btn-action" onclick="togglePause()" style="background: transparent; border: 1px solid #64748b; margin-top: 12px;">متابعة اللعب</button>
+      <p>اختر الخيار المناسب لك لشراء مضاعفات النقاط وزيادة سرعة التعدين عبر TON أو النجوم ⭐️</p>
+      
+      <!-- أزرار مضاعف 2x -->
+      <button class="btn-action" onclick="buyMultiplier(2, '0.5')">⚡️ تفعيل مضاعف 2x (0.5 TON)</button>
+      <button class="btn-action btn-stars" onclick="buyMultiplierStars(2, 125)">⭐️ تفعيل مضاعف 2x (125 نجمة)</button>
+
+      <!-- أزرار مضاعف 5x -->
+      <button class="btn-action" onclick="buyMultiplier(5, '1.0')" style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 12px;">🔥 تفعيل مضاعف 5x (1.0 TON)</button>
+      <button class="btn-action btn-stars-gold" onclick="buyMultiplierStars(5, 250)">⭐️ تفعيل مضاعف 5x (250 نجمة)</button>
+
+      <button class="btn-action" onclick="togglePause()" style="background: transparent; border: 1px solid #64748b; margin-top: 16px;">متابعة اللعب</button>
     </div>
   </div>
 
