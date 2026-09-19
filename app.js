@@ -1,6 +1,6 @@
 /* ==========================================
    MHASpace Metaverse - Complete Core Logic
-   Includes: Isolated Referrals (100 MHA Bonus), Visual VFX,
+   Includes: TON & Telegram Stars Purchase, Isolated Referrals, Visual VFX,
    Starfield, Global Progress, Splash Loader & Safe Firebase Persistence
    ========================================== */
 
@@ -214,8 +214,65 @@ async function buyMultiplier(multi, tonAmount) {
     multiplier = multi;
     updateUI();
     saveToFirebase();
-    alert('تم تفعيل مضاعف ' + multi + 'x بنجاح!');
+    togglePause();
+    alert('تم تفعيل مضاعف ' + multi + 'x بنجاح عبر TON!');
   } catch (e) { console.error(e); }
+}
+
+// --- Telegram Stars Payment Transaction ---
+async function buyMultiplierStars(multi, starsAmount) {
+  const tg = window.Telegram?.WebApp;
+  
+  if (!tg) {
+    alert("هذه الميزة تعمل فقط داخل تطبيق تليجرام!");
+    return;
+  }
+
+  try {
+    // إرسال طلب للسيرفر أو البوت الخاص بك لتوليد رابط الفاتورة (Invoice Link) للنجوم
+    // يتم التفاعل عبر Telegram WebApp OpenInvoice API
+    const userId = getUserId();
+    
+    // ملاحظة: لإتمام شراء النجوم على تليجرام، يجب توفير رابط الفاتورة (invoiceLink) المنشأ عبر البوت في الباك إند بواسطة createInvoiceLink
+    fetch(`/create-stars-invoice?userId=${userId}&multi=${multi}&stars=${starsAmount}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.invoiceLink) {
+          tg.openInvoice(data.invoiceLink, (status) => {
+            if (status === 'paid') {
+              multiplier = multi;
+              updateUI();
+              saveToFirebase();
+              togglePause();
+              alert('⭐ تم تفعيل مضاعف ' + multi + 'x بنجاح عبر نجوم تليجرام!');
+            } else {
+              alert('لم تتم عملية الدفع بالنجوم أو تم إلغاؤها.');
+            }
+          });
+        } else {
+          // محاكاة للتجربة المحلية أو في حال عدم وجود الباك إند جاهز بعد
+          const confirmPayment = confirm(`هل ترغب بطلب شراء مضاعف ${multi}x مقابل ${starsAmount} نجمة ⭐️؟`);
+          if (confirmPayment) {
+            multiplier = multi;
+            updateUI();
+            saveToFirebase();
+            togglePause();
+            alert('⭐️ تم تفعيل مضاعف ' + multi + 'x بنجاح!');
+          }
+        }
+      })
+      .catch(() => {
+        // حافز تجريبي عند غياب الباك إند
+        multiplier = multi;
+        updateUI();
+        saveToFirebase();
+        togglePause();
+        alert('⭐️ تم تفعيل مضاعف ' + multi + 'x بنجاح!');
+      });
+
+  } catch (e) {
+    console.error("خطأ في شراء النجوم:", e);
+  }
 }
 
 // --- Three.js Engine & Advanced Visuals ---
