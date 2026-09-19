@@ -3,181 +3,341 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MHASpace Metaverse - TON Edition</title>
+  <title>MHASpace Metaverse Game</title>
   
-  <!-- Three.js & Firebase SDKs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- 1. تضمين مكتبة TonConnect UI الرسمية -->
+  <!-- TON Connect SDK -->
   <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+  
+  <!-- Three.js Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- Firebase App & Database -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; }
-    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-    
-    /* شاشة الاستقبال الشفافة */
-    #welcome-modal {
-      position: absolute; inset: 0; z-index: 100;
-      background: rgba(248, 250, 252, 0.85); backdrop-filter: blur(16px);
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      padding: 24px; text-align: center;
-    }
-    .welcome-card {
-      background: #ffffff; border: 2px solid #38bdf8; border-radius: 24px;
-      padding: 32px 24px; box-shadow: 0 20px 40px rgba(56, 189, 248, 0.2);
-      max-width: 380px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px;
-    }
-    .welcome-card h1 { font-size: 26px; color: #0284c7; text-shadow: 0 2px 10px rgba(2, 132, 199, 0.2); }
-    .welcome-card p { font-size: 13px; color: #475569; line-height: 1.6; }
-
-    /* HUD الواجهة العلوية */
-    .hud {
-      position: absolute; top: 12px; left: 12px; right: 12px;
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px);
-      border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 20px;
-      padding: 10px 14px; z-index: 10; box-shadow: 0 8px 24px rgba(0,0,0,0.05);
-    }
-    .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: #e0f2fe; color: #0284c7; border: 1px solid #38bdf8; font-weight: bold; }
-    
-    #pause-btn {
-      background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 16px;
-      width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* شريط التقدم */
-    .progress-container {
-      position: absolute; top: 76px; left: 50%; transform: translateX(-50%);
-      width: 90%; max-width: 400px; z-index: 10;
-      background: rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 8px 12px;
-      border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    .progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .progress-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #eab308); transition: width 0.3s; }
-
-    /* شاشة Pause التفاعلية */
-    #pause-modal {
-      position: absolute; inset: 0; z-index: 90;
-      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px);
-      display: none; flex-direction: column; justify-content: center; align-items: center; color: white;
-    }
-    .btn-resume {
-      background: linear-gradient(135deg, #38bdf8, #0284c7); border: none; color: white;
-      padding: 14px 32px; border-radius: 16px; font-size: 18px; font-weight: bold;
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); cursor: pointer; animation: pulse 1.5s infinite;
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #030712;
+      color: #fff;
     }
 
-    /* أزرار التحفيز والدفع المضيئة */
-    .action-bar {
-      position: absolute; bottom: 16px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 10;
-    }
-    .pay-group { display: flex; gap: 10px; }
-    .btn-pay {
-      background: linear-gradient(135deg, #38bdf8, #0284c7); border: none; color: white;
-      padding: 10px 16px; border-radius: 14px; font-size: 12px; font-weight: bold;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5); cursor: pointer; animation: pulse 2s infinite;
-    }
-    .btn-pay.gold {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+    /* 🌌 Three.js Canvas Container */
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
     }
 
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.03); }
-      100% { transform: scale(1); }
+    /* 🚀 Splash Loader Screen (شاشة التحميل رقم 8) */
+    #splash-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #030712;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
     }
 
-    /* لوحة التحكم الأسهم */
-    .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-gap: 6px; }
-    .dbtn {
-      width: 48px; height: 48px; background: rgba(255,255,255,0.8); backdrop-filter: blur(8px);
-      border: 1px solid #cbd5e1; border-radius: 14px; color: #0f172a; font-size: 18px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(56, 189, 248, 0.2);
+      border-top: 4px solid #38bdf8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
     }
-    .dbtn:active { background: #38bdf8; color: white; }
 
-    /* تأثير الكبسولة الرقمية الطافية */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 📊 HUD Top Bar UI (رقم 4 و 7) */
+    #ui-container {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .hud-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      pointer-events: auto;
+    }
+
+    .score-title {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .score-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #38bdf8;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* شريط تقدم التوزيع (Global Airdrop Progress Bar) */
+    .progress-box {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 8px 12px;
+      pointer-events: auto;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-bottom: 4px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0284c7, #38bdf8);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* 🎮 D-Pad Controls Area */
+    #controls-container {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(2, 60px);
+      gap: 10px;
+    }
+
+    .control-btn {
+      width: 60px;
+      height: 60px;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 50%;
+      color: #38bdf8;
+      font-size: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: all 0.1s ease;
+    }
+
+    .control-btn:active {
+      background: rgba(56, 189, 248, 0.4);
+      transform: scale(0.95);
+    }
+
+    #btn-up { grid-column: 2; grid-row: 1; }
+    #btn-left { grid-column: 1; grid-row: 2; }
+    #btn-down { grid-column: 2; grid-row: 2; }
+    #btn-right { grid-column: 3; grid-row: 2; }
+
+    /* 🔲 Modals Structure */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-card h2 {
+      color: #38bdf8;
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+
+    .modal-card p {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: bold;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    /* Floating Reward Animation */
     .floating-text {
-      position: absolute; color: #f59e0b; font-weight: bold; font-size: 20px;
-      pointer-events: none; animation: floatUp 0.8s ease-out forwards; z-index: 20;
+      position: absolute;
+      color: #f59e0b;
+      font-weight: bold;
+      font-size: 20px;
+      pointer-events: none;
+      animation: floatUp 0.8s ease-out forwards;
+      z-index: 50;
     }
+
     @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+      0% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -50px); }
     }
   </style>
 </head>
 <body>
 
-  <!-- 1. شاشة الاستقبال لربط المحفظة -->
-  <div id="welcome-modal">
-    <div class="welcome-card">
-      <h1>MHASpace 🚀</h1>
-      <p>مرحباً بك في عالم MHASpace! يرجى ربط محفظة TON الخاصة بك لتسجيل الدخول واحتساب تقدمك ورصيدك مباشرة.</p>
-      <!-- حاوية زر التوصيل الرئيسية لشاشة الاستقبال -->
-      <div id="welcome-ton-btn"></div>
-    </div>
+  <!-- 🚀 1. Splash Loader (شاشة التحميل) -->
+  <div id="splash-loader">
+    <div class="spinner"></div>
+    <h3 style="color: #38bdf8; font-size: 18px;">جاري تحميل MHASpace...</h3>
+    <p style="color: #64748b; font-size: 12px; margin-top: 8px;">مزامنة بيانات الفضاء وربط الفايربيس</p>
   </div>
 
-  <!-- 2. شاشة Pause الإيقاف المؤقت -->
-  <div id="pause-modal">
-    <h2 style="margin-bottom: 20px; font-size: 28px;">اللعبة متوقفة ⏸️</h2>
-    <button class="btn-resume" onclick="togglePause()">استئناف اللعب ▶️</button>
-  </div>
-
-  <!-- 3. HUD الواجهة الرئيسية -->
-  <div class="hud">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <button id="pause-btn" onclick="togglePause()">⏸️</button>
-      <div>
-        <span class="badge" id="rank-badge">المضاعف (1x)</span>
-        <div style="font-size: 10px; margin-top: 2px; color: #16a34a;" id="db-status">مربوط مع Firebase ⚡</div>
-      </div>
-    </div>
-    <!-- 2. وضع حاوية زر التوصيل العلوي داخل الواجهة -->
-    <div id="ton-connect-btn"></div>
-    <div style="text-align: left; dir: ltr;">
-      <div style="font-size: 10px; color: #64748b; text-align: right;">رصيد MHA</div>
-      <div style="font-size: 16px; font-weight: bold; color: #0284c7;"><span id="score-val">0.00</span></div>
-    </div>
-  </div>
-
-  <!-- 4. شريط التقدم السقف 7.5M -->
-  <div class="progress-container">
-    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #475569;">
-      <span>التقدم نحو السقف</span>
-      <span><span id="progress-text">0</span>% من M 7.5</span>
-    </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-fill"></div>
-    </div>
-  </div>
-
-  <!-- 5. أزرار التحكم والدفع -->
-  <div class="action-bar">
-    <div class="pay-group">
-      <button class="btn-pay" onclick="buyMultiplier(1000, '0.10')">مضاعف 1000x (0.10 TON)</button>
-      <button class="btn-pay gold" onclick="buyMultiplier(10000, '1.00')">مضاعف 10000x (1.00 TON)</button>
-    </div>
-    
-    <div class="dpad">
-      <div></div><div class="dbtn" id="btn-up">▲</div><div></div>
-      <div class="dbtn" id="btn-left">◄</div><div></div><div class="dbtn" id="btn-right">►</div>
-      <div></div><div class="dbtn" id="btn-down">▼</div><div></div>
-    </div>
-  </div>
-
+  <!-- 🌌 2. Three.js Canvas -->
   <div id="canvas-container"></div>
 
-  <!-- 3. استدعاء سكريبت المنطق والربط قبل إغلاق body -->
+  <!-- 📊 3. Top HUD UI Container -->
+  <div id="ui-container">
+    <div class="hud-card">
+      <div>
+        <div class="score-title">رصيد التعدين (MHA)</div>
+        <div class="score-value" id="score-val">0.00</div>
+      </div>
+      <div>
+        <span class="badge" id="rank-badge">المضاعف (1x)</span>
+        <button onclick="togglePause()" style="background: none; border: none; color: #94a3b8; font-size: 18px; margin-right: 8px; cursor: pointer;">⏸️</button>
+      </div>
+    </div>
+
+    <!-- Global Progress Bar -->
+    <div class="progress-box">
+      <div class="progress-header">
+        <span>نسبة التعدين العالمي</span>
+        <span><span id="progress-text">0.0000</span>%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div style="font-size: 10px; color: #64748b; margin-top: 4px; text-align: left;" id="db-status">جاري التحقق من المحفظة...</div>
+    </div>
+
+    <!-- TON Connect Header Button Container -->
+    <div id="ton-connect-btn" style="display: flex; justify-content: flex-end; margin-top: 4px;"></div>
+  </div>
+
+  <!-- 🎮 4. D-Pad Directional Controls -->
+  <div id="controls-container">
+    <button class="control-btn" id="btn-up">▲</button>
+    <button class="control-btn" id="btn-left">◄</button>
+    <button class="control-btn" id="btn-down">▼</button>
+    <button class="control-btn" id="btn-right">►</button>
+  </div>
+
+  <!-- 🔌 5. Welcome Wallet Connect Modal (تظهر في حال عدم الربط) -->
+  <div class="modal-overlay" id="welcome-modal" style="display: none;">
+    <div class="modal-card">
+      <h2>مرحباً بك في MHASpace 🚀</h2>
+      <p>قم بربط محفظة TON الخاصة بك لحفظ تقدم التعدين والحصول على مكافآت الإحالات!</p>
+      <div id="welcome-ton-btn" style="display: flex; justify-content: center; margin-bottom: 12px;"></div>
+    </div>
+  </div>
+
+  <!-- ⏸️ 6. Pause Modal -->
+  <div class="modal-overlay" id="pause-modal" style="display: none;">
+    <div class="modal-card">
+      <h2>اللعبة متوقفة مؤقتاً ⏸️</h2>
+      <p>يمكنك شراء مضاعفات النقاط لزيادة سرعة التعدين عبر TON</p>
+      <button class="btn-action" onclick="buyMultiplier(2, '0.5')">تفعيل مضاعف 2x (0.5 TON)</button>
+      <button class="btn-action" onclick="buyMultiplier(5, '1.0')" style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 8px;">تفعيل مضاعف 5x (1.0 TON)</button>
+      <button class="btn-action" onclick="togglePause()" style="background: transparent; border: 1px solid #64748b; margin-top: 12px;">متابعة اللعب</button>
+    </div>
+  </div>
+
+  <!-- Main Game Logic Script -->
   <script src="app.js"></script>
 </body>
 </html>
